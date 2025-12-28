@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Planejador de Jejum Personalizado</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Inter:wght@400;500;600&family=Fira+Code:wght@400&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* --- DESIGN SYSTEM --- */
+        :root {
+            --bg-body: #FDFBF7; 
+            --bg-card: #ffffff;
+            --text-primary: #2C3E50; 
+            --text-secondary: #546E7A;
+            --brand-vivid: #FF6B6B; 
+            --brand-pastel: #4ECDC4; 
+            --brand-accent: #FFE66D; 
+            --border-color: #EAE0D5; 
+            --input-focus: rgba(255, 107, 107, 0.2);
+            --font-heading: 'Merriweather', serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'Fira Code', monospace;
+            --shadow-md: 0 8px 30px rgba(44, 62, 80, 0.08);
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-image: radial-gradient(#e0e0e0 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .container {
+            background: var(--bg-card);
+            width: 100%;
+            max-width: 750px;
+            padding: 40px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--brand-vivid), var(--brand-pastel));
+        }
+
+        h1, h2, h3 {
+            font-family: var(--font-heading);
+            color: var(--text-primary);
+            text-align: center;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+        }
+        
+        h1 { font-size: 2.2rem; margin-bottom: 10px; }
+        h2 { font-size: 1.8rem; }
+        
+        p.subtitle { 
+            text-align: center; color: var(--text-secondary); margin-bottom: 30px; font-size: 1.1rem; line-height: 1.5;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 18px;
+            margin: 15px 0 25px 0;
+            font-size: 16px;
+            font-family: var(--font-body);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: #fafafa;
+            transition: var(--transition);
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--brand-vivid);
+            box-shadow: 0 0 0 4px var(--input-focus);
+            background: white;
+        }
+
+        .btn {
+            background-color: var(--brand-vivid);
+            color: white;
+            border: none;
+            padding: 18px 30px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            width: 100%;
+            transition: var(--transition);
+            box-shadow: 0 4px 6px rgba(255, 107, 107, 0.2);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn:hover {
+            background-color: #e65b5b;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(255, 107, 107, 0.3);
+        }
+        
+        .btn-secondary { 
+            background-color: transparent; 
+            color: var(--text-secondary);
+            border: 2px solid var(--border-color);
+            box-shadow: none;
+            margin-top: 15px;
+        }
+        .btn-secondary:hover { 
+            background-color: #f8f9fa; 
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+            transform: none;
+        }
+
+        .question-block {
+            margin-bottom: 40px;
+            opacity: 0;
+            animation: slideInUp 0.5s ease forwards;
+        }
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .question-title {
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        @media (max-width: 600px) { .options-grid { grid-template-columns: 1fr; } }
+
+        .option-card {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+            color: var(--text-secondary);
+            position: relative;
+        }
+
+        .option-card:hover {
+            border-color: var(--brand-pastel);
+            background: #f0fffd;
+        }
+
+        .option-card input[type="radio"] { position: absolute; opacity: 0; height: 0; width: 0; }
+        
+        .option-card:has(input[type="radio"]:checked) {
+            border-color: var(--brand-vivid);
+            background-color: #fff5f5;
+            color: var(--text-primary);
+            box-shadow: 0 4px 10px rgba(255, 107, 107, 0.1);
+        }
+
+        .custom-radio {
+            display: inline-block;
+            width: 20px; height: 20px;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            margin-right: 12px;
+            transition: var(--transition);
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .option-card input[type="radio"]:checked + span::before {
+             content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+             border-radius: 50%; background-color: var(--brand-vivid);
+             box-shadow: inset 0 0 0 3px white;
+        }
+        .option-card input[type="radio"]:checked + span { border-color: var(--brand-vivid); }
+
+        .chart-container {
+            position: relative; height: 300px; width: 100%; margin: 30px 0;
+            padding: 10px; background: #fafafa; border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .prompt-box-container {
+            background-color: #f8f9fa;
+            border: 2px dashed var(--brand-pastel);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-top: 30px;
+            position: relative;
+        }
+
+        .prompt-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--brand-pastel);
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #prompt-text-area {
+            width: 100%;
+            height: 150px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: #555;
+            resize: none;
+            margin-bottom: 15px;
+        }
+        
+        #prompt-text-area:focus { outline: 2px solid var(--brand-pastel); border-color: transparent; }
+
+        .success-msg {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 15px;
+            display: none;
+            font-weight: 600;
+            animation: fadeIn 0.3s;
+        }
+
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.6s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="container fade-in">
+        
+        <div id="step-name">
+            <h1>Planejador de Jejum</h1>
+            <p class="subtitle">Descubra o protocolo ideal para o seu corpo. Vamos criar um plano profissional juntos.</p>
+            
+            <div style="margin-top: 40px;">
+                <label for="username" style="font-weight: 600; color: var(--text-primary); display:block; margin-bottom:5px;">Como devemos te chamar?</label>
+                <input type="text" id="username" placeholder="Digite seu nome..." autocomplete="off">
+                <button class="btn" onclick="startQuiz()">
+                    Iniciar Avaliação
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="step-form" class="hidden">
+            <h2 id="form-greeting">Sua Avaliação</h2>
+            <p class="subtitle">Responda com sinceridade para mapearmos seu perfil metabólico.</p>
+            <form id="quiz-form">
+                <div id="questions-container"></div>
+            </form>
+            <button id="submit-btn" class="btn" onclick="submitForm()">
+                Gerar Perfil e Plano
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+            </button>
+        </div>
+
+        <div id="step-result" class="hidden">
+            <h2>Análise Concluída!</h2>
+            <p class="subtitle">Seu perfil foi gerado. Abaixo está o gráfico do seu estilo de vida e o comando para gerar sua dieta.</p>
+            
+            <div class="chart-container">
+                <canvas id="myChart"></canvas>
+            </div>
+
+            <div class="prompt-box-container">
+                <div class="prompt-title">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    COMANDO PARA INTELIGÊNCIA ARTIFICIAL
+                </div>
+                
+                <textarea id="prompt-text-area" readonly></textarea>
+                
+                <button class="btn" onclick="copyToClipboard()" style="background-color: var(--brand-pastel);">
+                    Copiar Dados para o ChatGPT
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                </button>
+                
+                <div id="copy-success" class="success-msg">
+                    ✅ Copiado! Agora abra o ChatGPT e cole (Ctrl+V).
+                </div>
+            </div>
+            
+            <p style="text-align: center; font-size: 0.9em; margin-top: 15px; color: #777;">
+                Copie o texto acima e envie para uma IA (ChatGPT, Gemini ou Copilot) para receber seu cardápio completo.
+            </p>
+
+            <button class="btn btn-secondary" onclick="location.reload()">Refazer Avaliação</button>
+        </div>
+    </div>
+    <script>
+        // --- CONFIGURAÇÃO (Opcional) ---
+        const SHEETMONKEY_URL = ""; 
+
+        const questionsDB = [
+            { text: "{name}, qual é o seu objetivo principal?", opts: ["Emagrecimento Acelerado", "Ganho de Massa Magra", "Saúde e Longevidade", "Manutenção de Peso"] },
+            { text: "Qual a sua faixa etária, {name}?", opts: ["18 a 25 anos", "26 a 35 anos", "36 a 50 anos", "Mais de 50 anos"] },
+            { text: "Experiência com Jejum Intermitente?", opts: ["Nunca pratiquei", "Iniciante (já tentei)", "Intermediário", "Avançado (rotina)"] },
+            { text: "Nível de atividade física semanal?", opts: ["Sedentário", "Leve (caminhadas)", "Moderado (3-4x semana)", "Intenso (quase todo dia)"] },
+            { text: "{name}, como é sua fome ao acordar?", opts: ["Sem fome nenhuma", "Fome leve", "Fome moderada", "Muita fome (urgente)"] },
+            { text: "Qual seu maior sabotador na dieta?", opts: ["Doces e Açúcares", "Falta de Tempo", "Fome Noturna", "Eventos Sociais"] },
+            { text: "Quantas horas você dorme em média?", opts: ["Menos de 5 horas", "5 a 6 horas", "7 a 8 horas", "Mais de 8 horas"] },
+            { text: "Possui alguma restrição alimentar?", opts: ["Nenhuma", "Vegetariano/Vegano", "Lactose/Glúten", "Diabético"] },
+            { text: "{name}, qual janela parece mais fácil?", opts: ["Pular Café da Manhã", "Pular Jantar", "Uma Refeição (OMAD)", "Flexível"] },
+            { text: "Consumo diário de água?", opts: ["Menos de 1 Litro", "1 a 2 Litros", "2 a 3 Litros", "Mais de 3 Litros"] },
+            { text: "Nível de estresse atual?", opts: ["Baixo / Controlado", "Moderado", "Alto", "Burnout"] },
+            { text: "Consome café ou chás?", opts: ["Não", "Sim, com açúcar", "Sim, puros", "Energéticos"] },
+            { text: "Como são seus finais de semana?", opts: ["Foco 100%", "1 ref. livre", "Dia do lixo", "Descontrole total"] },
+            { text: "Habilidade na cozinha?", opts: ["Não sei cozinhar", "Básica", "Média", "Avançada"] },
+            { text: "Orçamento para dieta?", opts: ["Econômico", "Médio", "Confortável", "Ilimitado"] },
+            { text: "Usa suplementos?", opts: ["Nenhum", "Vitaminas", "Whey/Creatina", "Vários"] },
+            { text: "Reação a carboidratos?", opts: ["Energia", "Normal", "Sono/Peso", "Inchaço"] },
+            { text: "Proteína preferida?", opts: ["Carne Vermelha", "Frango/Ovos", "Peixe", "Vegetal"] },
+            { text: "Disciplina para horários?", opts: ["Difícil", "Tento mas falho", "Boa", "Militar"] },
+            { text: "Prazo para resultados?", opts: ["Urgente", "1 mês", "3 meses", "Longo prazo"] }
+        ];
+
+        let userName = "";
+        let userAnswers = [];
+
+        function startQuiz() {
+            const input = document.getElementById('username');
+            if (input.value.trim().length < 2) {
+                alert("Por favor, digite um nome válido.");
+                return;
+            }
+            userName = input.value.trim();
+            
+            document.getElementById('step-name').classList.add('hidden');
+            const stepForm = document.getElementById('step-form');
+            stepForm.classList.remove('hidden');
+            stepForm.classList.add('fade-in');
+            
+            document.getElementById('form-greeting').innerText = `Avaliação de ${userName}`;
+            renderQuestions();
+            window.scrollTo(0, 0);
+        }
+
+        function renderQuestions() {
+            const container = document.getElementById('questions-container');
+            container.innerHTML = "";
+
+            questionsDB.forEach((q, index) => {
+                const qBlock = document.createElement('div');
+                qBlock.className = 'question-block';
+                qBlock.style.animationDelay = `${index * 0.05}s`;
+
+                const personalizedText = q.text.replace(/{name}/g, userName);
+                
+                let html = `<div class="question-title">${index + 1}. ${personalizedText}</div>`;
+                html += `<div class="options-grid">`;
+                
+                q.opts.forEach((opt) => {
+                    html += `
+                        <label class="option-card">
+                            <input type="radio" name="q${index}" value="${opt}">
+                            <span class="custom-radio"></span>
+                            ${opt}
+                        </label>
+                    `;
+                });
+                
+                html += `</div>`;
+                qBlock.innerHTML = html;
+                container.appendChild(qBlock);
+            });
+        }
+
+        function submitForm() {
+            userAnswers = [];
+            let allAnswered = true;
+            let dataForSheet = { 'Nome': userName, 'Data': new Date().toLocaleString('pt-BR') };
+
+            for (let i = 0; i < questionsDB.length; i++) {
+                const selectedOption = document.querySelector(`input[name="q${i}"]:checked`);
+                if (selectedOption) {
+                    const qText = questionsDB[i].text.replace(/{name}/g, userName);
+                    userAnswers.push({ question: qText, answer: selectedOption.value });
+                    dataForSheet[`P${i+1}`] = selectedOption.value;
+                } else {
+                    allAnswered = false;
+                    document.getElementsByClassName('question-block')[i].scrollIntoView({behavior: "smooth", block: "center"});
+                    alert(`Por favor, responda a pergunta número ${i + 1}.`);
+                    return;
+                }
+            }
+
+            const btn = document.getElementById('submit-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "Gerando Resultados...";
+            btn.disabled = true;
+
+            if(SHEETMONKEY_URL && SHEETMONKEY_URL.startsWith("http")) {
+                fetch(SHEETMONKEY_URL, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dataForSheet)
+                }).catch(e => console.warn("Erro ao salvar na planilha", e));
+            }
+
+            setTimeout(() => {
+                document.getElementById('step-form').classList.add('hidden');
+                const stepResult = document.getElementById('step-result');
+                stepResult.classList.remove('hidden');
+                stepResult.classList.add('fade-in');
+                window.scrollTo(0, 0);
+                
+                renderChart();
+                generatePrompt();
+                
+            }, 800);
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('myChart').getContext('2d');
+            const dataValues = [70, 60, 80, 50, 65, 45]; 
+
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Disciplina', 'Atividade', 'Sono', 'Hidratação', 'Nutrição', 'Experiência'],
+                    datasets: [{
+                        label: `Perfil de ${userName}`,
+                        data: dataValues,
+                        backgroundColor: 'rgba(255, 107, 107, 0.2)',
+                        borderColor: '#FF6B6B',
+                        pointBackgroundColor: '#FF6B6B',
+                        pointBorderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: '#EAE0D5' },
+                            grid: { color: '#EAE0D5' },
+                            pointLabels: { font: { size: 12, family: "'Inter', sans-serif" }, color: '#546E7A' },
+                            suggestedMin: 20, suggestedMax: 100,
+                            ticks: { display: false }
+                        }
+                    },
+                    plugins: { legend: { labels: { font: { family: "'Inter', sans-serif" } } } }
+                }
+            });
+        }
+
+        function generatePrompt() {
+            let prompt = `Atue como um Nutricionista Especialista em Jejum Intermitente.\n`;
+            prompt += `Crie um plano alimentar detalhado e uma tabela de horários de jejum para meu cliente abaixo:\n\n`;
+            prompt += `NOME: ${userName}\n`;
+            prompt += `--- DADOS DO CLIENTE ---\n`;
+            
+            userAnswers.forEach((item, i) => {
+                prompt += `(${i+1}) ${item.question}: ${item.answer}\n`;
+            });
+
+            prompt += `\n--- PEDIDO ---\n`;
+            prompt += `Com base nesses dados, forneça:\n`;
+            prompt += `1. O Protocolo de Jejum ideal (ex: 16/8).\n`;
+            prompt += `2. Horários exatos para abrir e fechar a janela.\n`;
+            prompt += `3. Sugestão de cardápio para as refeições principais.\n`;
+            prompt += `4. Uma estratégia específica para o obstáculo citado na pergunta 6.\n`;
+            prompt += `Seja motivador e profissional.`;
+
+            document.getElementById('prompt-text-area').value = prompt;
+        }
+
+        function copyToClipboard() {
+            const copyText = document.getElementById("prompt-text-area");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); 
+            
+            navigator.clipboard.writeText(copyText.value).then(() => {
+                const msg = document.getElementById('copy-success');
+                msg.style.display = 'block';
+                setTimeout(() => { msg.style.display = 'none'; }, 4000);
+            });
+        }
+    </script>
+</body>
+</html>
